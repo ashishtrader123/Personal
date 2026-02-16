@@ -55,3 +55,22 @@ python -m app.backtest --csv sample_last_month.csv --capital 300000
 ```bash
 python -m pytest -q
 ```
+
+## 10AM breakout day-wise + monthly analysis
+
+If you want the specific logic you requested:
+
+- use the first candle at/after **10:00 AM** as the reference range,
+- if price breaks above the 10AM high => `SELL_PUT` (100 points below rounded ATM),
+- if price breaks below the 10AM low => `SELL_CALL` (100 points above rounded ATM),
+- exit when day PnL hits stop loss (`-2000`) or target (`+4000`), else day-end.
+
+Run:
+
+```bash
+python -m app.analysis.ten_am_breakout --csv /path/to/intraday.csv --lot-size 75 --daily-stop-loss 2000 --daily-target 4000
+```
+
+Output includes **day-wise PnL** and **monthly total PnL**.
+
+> Note: this uses underlying move as a proxy for option PnL because option premium time-series is not present in your file.
