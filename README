@@ -16,7 +16,7 @@ python -m app.main
 
 Prepare input data in either of these formats:
 
-- standard CSV with `Date,Close` headers, and
+- standard CSV with `Date,Close` headers (supports `YYYY-MM-DD` and `D-M-YY` dates), and
 - Zerodha-style tab/comma rows in `Date Open High Low Close` format (like the data you pasted).
 
 ```csv

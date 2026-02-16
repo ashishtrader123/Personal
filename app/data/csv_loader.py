@@ -21,8 +21,10 @@ def _parse_date(value: str) -> datetime:
     for fmt in (
         "%Y-%m-%d",
         "%d-%m-%Y",
+        "%d-%m-%y",
         "%Y/%m/%d",
         "%d/%m/%Y",
+        "%d/%m/%y",
         "%a %b %d %Y %H:%M:%S",
     ):
         try:

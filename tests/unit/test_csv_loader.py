@@ -30,3 +30,15 @@ def test_load_zerodha_style_ohlc_rows(tmp_path: Path):
     assert len(rows) == 2
     assert rows[0].close == 26676.9
     assert rows[1].close == 26699.1
+
+
+def test_load_date_close_with_two_digit_year(tmp_path: Path):
+    csv_path = tmp_path / "prices_2digit.csv"
+    csv_path.write_text(
+        "Date,Close\n1-1-26,100\n2-1-26,101\n",
+        encoding="utf-8",
+    )
+
+    rows = load_close_prices(str(csv_path))
+    assert len(rows) == 2
+    assert rows[0].close == 100.0
