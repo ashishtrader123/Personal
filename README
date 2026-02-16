@@ -14,7 +14,10 @@ python -m app.main
 
 ## Run on your last 1 month data (CSV)
 
-Prepare a CSV file with at least these headers:
+Prepare input data in either of these formats:
+
+- standard CSV with `Date,Close` headers, and
+- Zerodha-style tab/comma rows in `Date Open High Low Close` format (like the data you pasted).
 
 ```csv
 Date,Close
