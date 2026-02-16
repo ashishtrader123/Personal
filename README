@@ -1,0 +1,76 @@
+# Zerodha Auto-Trading App (Starter)
+
+> ⚠️ Educational starter only. Do not use live without robust backtesting, paper trading, and broker-compliant controls.
+
+This project includes:
+- a runnable paper-trading loop (`python -m app.main`), and
+- a CSV backtest runner for your own historical data (`python -m app.backtest --csv ...`).
+
+## Run paper simulation
+
+```bash
+python -m app.main
+```
+
+## Run on your last 1 month data (CSV)
+
+Prepare input data in either of these formats:
+
+- standard CSV with `Date,Close` headers (supports `YYYY-MM-DD` and `D-M-YY` dates), and
+- Zerodha-style tab/comma rows in `Date Open High Low Close` format (like the data you pasted).
+
+```csv
+Date,Close
+2026-01-01,22010.25
+2026-01-02,22120.10
+```
+
+Then run:
+
+```bash
+python -m app.backtest --csv /path/to/your_data.csv --capital 300000
+```
+
+The backtest runner automatically takes only the **last 30 calendar days** from your CSV and executes the strategy on that slice.
+
+## Example run with included sample data
+
+```bash
+python -m app.backtest --csv sample_last_month.csv --capital 300000
+```
+
+## Environment variables for paper simulation
+
+- `CAPITAL` (default `300000`)
+- `RISK_PER_TRADE_PCT` (default `0.01`)
+- `MAX_DAILY_LOSS_PCT` (default `0.02`)
+- `MAX_TRADES_PER_DAY` (default `5`)
+- `SYMBOL` (default `NSE:NIFTY 50`)
+- `SHORT_WINDOW` (default `5`)
+- `LONG_WINDOW` (default `20`)
+- `MODE` (default `paper`)
+
+## Tests
+
+```bash
+python -m pytest -q
+```
+
+## 9AM breakout day-wise + monthly analysis
+
+If you want the specific logic you requested:
+
+- use the first candle at/after **9:00 AM** as the reference range,
+- if price clearly breaks above the 9AM high => `BUY_CALL` (100 points above rounded ATM),
+- if price clearly breaks below the 9AM low => `BUY_PUT` (100 points below rounded ATM),
+- stop loss = **30%**, target = **70%** (percentage-based exits), else day-end.
+
+Run:
+
+```bash
+python -m app.analysis.ten_am_breakout --csv /path/to/intraday.csv --lot-size 75 --reference-hour 9 --reference-minute 0 --stop-loss-pct 0.30 --target-pct 0.70
+```
+
+Output includes **day-wise PnL** and **monthly total PnL**.
+
+> Note: this uses underlying move as a proxy for option PnL (option premium series is not present) because option premium time-series is not present in your file.
