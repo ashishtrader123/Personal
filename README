@@ -2,37 +2,41 @@
 
 > ⚠️ Educational starter only. Do not use live without robust backtesting, paper trading, and broker-compliant controls.
 
-This project now includes a runnable **paper-trading application** with:
-- momentum strategy (short/long moving average crossover),
-- risk guards (daily loss cap, max trades/day, kill switch support),
-- position sizing by fixed risk per trade,
-- simulated market price stream for testing behavior without real orders.
+This project includes:
+- a runnable paper-trading loop (`python -m app.main`), and
+- a CSV backtest runner for your own historical data (`python -m app.backtest --csv ...`).
 
-## Project Structure
-
-```text
-app/
-├── config/settings.py
-├── data/market_stream.py
-├── execution/paper_broker.py
-├── risk/guards.py
-├── risk/position_sizing.py
-├── strategy/base.py
-├── strategy/momentum_breakout.py
-└── main.py
-tests/unit/
-├── test_position_sizing.py
-├── test_risk_guards.py
-└── test_strategy.py
-```
-
-## Quick Start
+## Run paper simulation
 
 ```bash
 python -m app.main
 ```
 
-Optional environment variables:
+## Run on your last 1 month data (CSV)
+
+Prepare a CSV file with at least these headers:
+
+```csv
+Date,Close
+2026-01-01,22010.25
+2026-01-02,22120.10
+```
+
+Then run:
+
+```bash
+python -m app.backtest --csv /path/to/your_data.csv --capital 300000
+```
+
+The backtest runner automatically takes only the **last 30 calendar days** from your CSV and executes the strategy on that slice.
+
+## Example run with included sample data
+
+```bash
+python -m app.backtest --csv sample_last_month.csv --capital 300000
+```
+
+## Environment variables for paper simulation
 
 - `CAPITAL` (default `300000`)
 - `RISK_PER_TRADE_PCT` (default `0.01`)
@@ -43,22 +47,8 @@ Optional environment variables:
 - `LONG_WINDOW` (default `20`)
 - `MODE` (default `paper`)
 
-Example:
-
-```bash
-CAPITAL=300000 RISK_PER_TRADE_PCT=0.005 MAX_TRADES_PER_DAY=3 python -m app.main
-```
-
-## Run Tests
+## Tests
 
 ```bash
 python -m pytest -q
 ```
-
-## Next Steps to Go Production
-
-1. Replace `simulated_prices()` with Zerodha Kite WebSocket/candle feeds.
-2. Add authenticated order placement adapter for Kite Connect.
-3. Add persistence (SQLite/PostgreSQL) for trades and audit logs.
-4. Add circuit breakers and API retry policy.
-5. Backtest strategy with brokerage + slippage + latency assumptions.
