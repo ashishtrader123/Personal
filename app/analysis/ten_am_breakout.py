@@ -67,8 +67,9 @@ def _nearest_100(price: float) -> int:
 def run_backtest(
     bars: list[OhlcBar],
     lot_size: int = 75,
-    daily_stop_loss: float = 2000.0,
-    daily_target: float = 4000.0,
+    reference_time: time = time(9, 0),
+    stop_loss_pct: float = 0.30,
+    target_pct: float = 0.70,
 ) -> list[DayResult]:
     by_day: dict[str, list[OhlcBar]] = {}
     for bar in bars:
@@ -79,11 +80,9 @@ def run_backtest(
     for day, day_bars in by_day.items():
         day_bars.sort(key=lambda b: b.dt)
 
-        ref = next((b for b in day_bars if b.dt.time() >= time(10, 0)), None)
+        ref = next((b for b in day_bars if b.dt.time() >= reference_time), None)
         if ref is None:
-            results.append(
-                DayResult(day, "NO_TRADE", None, None, None, "NO_10AM_DATA", 0.0)
-            )
+            results.append(DayResult(day, "NO_TRADE", None, None, None, "NO_REF_CANDLE", 0.0))
             continue
 
         ref_high, ref_low = ref.high, ref.low
@@ -101,30 +100,33 @@ def run_backtest(
 
             if position is None:
                 if bar.high > ref_high:
-                    position = "SELL_PUT"
-                    entry_price = bar.close
-                    entry_time = bar.dt.strftime("%H:%M")
-                    strike = _nearest_100(entry_price) - 100
-                elif bar.low < ref_low:
-                    position = "SELL_CALL"
+                    position = "BUY_CALL"
                     entry_price = bar.close
                     entry_time = bar.dt.strftime("%H:%M")
                     strike = _nearest_100(entry_price) + 100
+                elif bar.low < ref_low:
+                    position = "BUY_PUT"
+                    entry_price = bar.close
+                    entry_time = bar.dt.strftime("%H:%M")
+                    strike = _nearest_100(entry_price) - 100
                 else:
                     continue
 
-            if position == "SELL_PUT":
-                realized = (bar.close - entry_price) * lot_size
-            elif position == "SELL_CALL":
-                realized = (entry_price - bar.close) * lot_size
+            if position == "BUY_CALL":
+                directional_points = bar.close - entry_price
+                move_pct = (bar.close - entry_price) / entry_price
+            else:
+                directional_points = entry_price - bar.close
+                move_pct = (entry_price - bar.close) / entry_price
+            realized = directional_points * lot_size
 
-            if realized <= -abs(daily_stop_loss):
+            if move_pct <= -abs(stop_loss_pct):
                 exit_time = bar.dt.strftime("%H:%M")
-                exit_reason = "STOP_LOSS"
+                exit_reason = "STOP_LOSS_PCT"
                 break
-            if realized >= abs(daily_target):
+            if move_pct >= abs(target_pct):
                 exit_time = bar.dt.strftime("%H:%M")
-                exit_reason = "TARGET"
+                exit_reason = "TARGET_PCT"
                 break
 
         if position is None:
@@ -134,7 +136,7 @@ def run_backtest(
         if exit_time is None:
             last = day_bars[-1]
             exit_time = last.dt.strftime("%H:%M")
-            if position == "SELL_PUT":
+            if position == "BUY_CALL":
                 realized = (last.close - entry_price) * lot_size
             else:
                 realized = (entry_price - last.close) * lot_size
@@ -156,28 +158,31 @@ def run_backtest(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="10AM breakout analysis with short 100-point option side proxy"
+        description="9AM breakout analysis using BUY_CALL / BUY_PUT with 100-point strike offset"
     )
     parser.add_argument("--csv", required=True, help="CSV with Date,Open,High,Low,Close")
     parser.add_argument("--lot-size", type=int, default=75)
-    parser.add_argument("--daily-stop-loss", type=float, default=2000.0)
-    parser.add_argument("--daily-target", type=float, default=4000.0)
+    parser.add_argument("--reference-hour", type=int, default=9)
+    parser.add_argument("--reference-minute", type=int, default=0)
+    parser.add_argument("--stop-loss-pct", type=float, default=0.30)
+    parser.add_argument("--target-pct", type=float, default=0.70)
     args = parser.parse_args()
 
     bars = load_ohlc_bars(args.csv)
     results = run_backtest(
         bars,
         lot_size=args.lot_size,
-        daily_stop_loss=args.daily_stop_loss,
-        daily_target=args.daily_target,
+        reference_time=time(args.reference_hour, args.reference_minute),
+        stop_loss_pct=args.stop_loss_pct,
+        target_pct=args.target_pct,
     )
 
     monthly = sum(r.pnl for r in results)
-    print("Date       Signal     Strike Entry Exit  Reason      PnL")
+    print("Date       Signal     Strike Entry Exit  Reason          PnL")
     for r in results:
         strike = str(r.strike) if r.strike is not None else "-"
         print(
-            f"{r.date} {r.signal:<10} {strike:>6} {str(r.entry_time or '-'):>5} {str(r.exit_time or '-'):>5} {r.exit_reason:<10} {r.pnl:>8.2f}"
+            f"{r.date} {r.signal:<10} {strike:>6} {str(r.entry_time or '-'):>5} {str(r.exit_time or '-'):>5} {r.exit_reason:<14} {r.pnl:>8.2f}"
         )
     print(f"\nTotal days: {len(results)}")
     print(f"Monthly PnL: {monthly:.2f}")
