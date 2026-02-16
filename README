@@ -1,0 +1,88 @@
+# Zerodha Auto-Trading App: Project Folder Structure
+
+```text
+autotrade-zerodha/
+├── app/
+│   ├── config/
+│   │   ├── settings.py                # App settings loader (env + defaults)
+│   │   └── logging.yaml               # Central logging configuration
+│   ├── data/
+│   │   ├── market_stream.py           # Live ticks/candles from Kite WebSocket/API
+│   │   ├── historical_loader.py       # Historical OHLC fetch for backtests
+│   │   └── instruments_cache.py       # Instrument master caching
+│   ├── strategy/
+│   │   ├── base.py                    # Strategy interface
+│   │   ├── momentum_breakout.py       # Example strategy implementation
+│   │   └── mean_reversion.py          # Optional alternate strategy
+│   ├── risk/
+│   │   ├── position_sizing.py         # Qty calculation by risk per trade
+│   │   ├── guards.py                  # Daily max loss, max trades, kill switch
+│   │   └── sl_tp.py                   # Stop-loss / target logic
+│   ├── execution/
+│   │   ├── broker_kite.py             # Zerodha API wrapper
+│   │   ├── order_manager.py           # Place/modify/cancel orders + retries
+│   │   └── paper_broker.py            # Paper trading adapter
+│   ├── portfolio/
+│   │   ├── positions.py               # Open/closed positions tracking
+│   │   └── pnl.py                     # Realized/unrealized P&L computation
+│   ├── monitoring/
+│   │   ├── alerts.py                  # Telegram/email alerts
+│   │   └── healthcheck.py             # Liveness checks + API connectivity
+│   ├── storage/
+│   │   ├── db.py                      # DB connection/session
+│   │   ├── models.py                  # Trade/order/candle schemas
+│   │   └── repositories.py            # Data access layer
+│   ├── api/
+│   │   ├── server.py                  # Optional FastAPI status dashboard backend
+│   │   └── routes.py                  # Endpoints for status/reports/control
+│   └── main.py                        # Runtime entrypoint (live/paper mode)
+├── backtests/
+│   ├── engine.py                      # Backtest runner
+│   ├── metrics.py                     # CAGR, Sharpe, max drawdown, expectancy
+│   └── scenarios/                     # Scenario configs (symbol, timeframe, dates)
+├── scripts/
+│   ├── run_live.sh                    # Start live trading
+│   ├── run_paper.sh                   # Start paper trading
+│   ├── run_backtest.sh                # Launch a backtest job
+│   └── bootstrap.sh                   # Setup env, folders, migrations
+├── tests/
+│   ├── unit/
+│   │   ├── test_strategy.py
+│   │   ├── test_risk_guards.py
+│   │   └── test_position_sizing.py
+│   └── integration/
+│       ├── test_order_flow.py
+│       └── test_paper_session.py
+├── configs/
+│   ├── app.dev.yaml                   # Development config
+│   ├── app.prod.yaml                  # Production config
+│   └── strategy.momentum.yaml         # Strategy parameters
+├── infra/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── systemd/autotrade.service      # VPS service definition
+├── .env.example                        # API keys + environment variable template
+├── requirements.txt
+├── pyproject.toml
+└── README.md
+```
+
+## Recommended Build Order
+1. `execution/broker_kite.py` + `execution/paper_broker.py`
+2. `strategy/base.py` + one simple strategy
+3. `risk/guards.py` + `risk/position_sizing.py`
+4. `portfolio/` and `storage/` tracking
+5. `backtests/engine.py` and metrics
+6. Monitoring + alerts + dashboard API
+
+## Minimum Safety Controls Before Going Live
+- Risk per trade capped (for example: 0.5% to 1% of capital)
+- Daily max loss guard and automatic shutdown
+- Max open positions and max trades/day
+- Mandatory stop-loss placement for every order
+- Kill switch from config or API endpoint
+
+## Suggested Modes
+- **Paper mode**: full data + simulated orders
+- **Shadow mode**: live signals logged, no orders
+- **Live mode**: real orders with strict risk guards
